@@ -18,6 +18,10 @@ def is_finger_down(landmarks, finger_tip, finger_pip):
         
         # LOGICA UNIVERSAL PARA PULGAR (Basada en distancias, funciona en cualquier rotacion)
         if tip == hands_model.HandLandmark.THUMB_TIP:
+            if is_upside:
+                if landmarks[tip].y < landmarks[pip].y:
+                    return True
+
             # Comparamos la distancia de la PUNTA al Nudillo Meñique (17) 
             # vs la distancia de la Articulacion (IP) al Nudillo Meñique (17).
             # Si la punta esta mas cerca del meñique que la articulacion, el dedo esta doblandose hacia adentro.
@@ -91,30 +95,67 @@ def fingers_pointing_to_the_right(landmarks):
     # El Nudillo del indice (5) esta a la derecha de la Muñeca (0)
     return landmarks[5].x > landmarks[0].x
 
+def thumb_tip_over_middle_tip(landmarks):
+    return landmarks[4].y > landmarks[12].y and distance_between_fingers(4,12,landmarks) < 0.1
+
 def fingers_pointing_to_the_left(landmarks):
     # El Nudillo del indice (5) esta a la izquierda de la Muñeca (0)
     return landmarks[5].x < landmarks[0].x
 
-def identify_letter(finger_status):
+def tips_over_mcps(landmarks):
+    return (distance_between_fingers(8,5,landmarks) < 0.05) and (distance_between_fingers(12,9,landmarks) < 0.05) and (distance_between_fingers(16,13,landmarks) < 0.05) and (distance_between_fingers(20,17,landmarks) < 0.05)
 
-    if finger_status == [0,0,0,0,0]:
-        return 'A'
-    
-    if finger_status == [0,1,1,1,1]:
-        return 'B'
-    
-    if finger_status == [1,0,0,0,0]:
-        return 'E'
-    
-    if finger_status == [0,1,1,0,0]:
-        if is_finger_crossed(hands_model.HandLandmark.INDEX_FINGER_TIP,hands_model.HandLandmark.MIDDLE_FINGER_TIP,results.multi_hand_landmarks[0].landmark):
-            return 'R'
-        elif distance_between_fingers(hands_model.HandLandmark.INDEX_FINGER_TIP,hands_model.HandLandmark.MIDDLE_FINGER_TIP,results.multi_hand_landmarks[0].landmark) < 0.1:
-            return 'V'
-        else:
-            return 'U'
-    return ''
+def identify_letter(finger_status, landmarks):
 
+    if straight_hand(landmarks):
+        if finger_status == [1,0,0,0,0]:
+            if tips_over_mcps(landmarks):
+                return "E"
+            else:
+                return "A"
+        
+        if finger_status == [1,1,0,0,0]:
+            if thumb_tip_over_middle_tip(landmarks):
+                return "D"
+            else:
+                return "L"
+        
+        if finger_status == [0,1,1,0,0]:
+            if is_finger_crossed(8,12,landmarks):
+                return "R"
+            elif distance_between_fingers(8,12,landmarks) > 0.15:
+                return "V"
+            else:
+                return "U"
+     
+
+        if finger_status == [0,0,0,0,1]:
+            return "I"
+
+        if finger_status == [0,1,1,1,0]:
+            if distance_between_fingers(8,12,landmarks) > 0.1 and distance_between_fingers(12,16,landmarks) > 0.1:
+                return "W"
+            else:
+                return "P"
+
+        if finger_status == [1,0,1,1,1]:
+            #punta del dedo gordo y punta del dedo indice estan cerca
+            if distance_between_fingers(4,8,landmarks) < 0.1:
+                return "O"
+            elif distance_between_fingers(2,8,landmarks) < 0.15:
+                return "S"
+        
+    if side_hand(landmarks):
+        if finger_status == [0,1,1,1,1]:
+            return "B"
+        if finger_status == [1,1,1,0,0]:
+            return "CH"
+        if finger_status == [0,1,0,0,0]:
+            return "G"
+    
+    if upside_down_hand(landmarks):
+        if finger_status == [0,1,1,1,0]:
+            return "M"
 cap = cv2.VideoCapture(0)
 finger_tips = [hands_model.HandLandmark.THUMB_TIP,
                hands_model.HandLandmark.INDEX_FINGER_TIP,
@@ -144,11 +185,16 @@ with hands_model.Hands(min_detection_confidence=0.5, min_tracking_confidence=0.8
                    
             status = get_finger_status(results.multi_hand_landmarks[0].landmark)
             print(status)
-            letter = identify_letter(status)
+            letter = identify_letter(status,results.multi_hand_landmarks[0].landmark)
+            if side_hand(results.multi_hand_landmarks[0].landmark):
+                cv2.putText(image,'Side', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            if upside_down_hand(results.multi_hand_landmarks[0].landmark):
+                cv2.putText(image,'Upside', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            if straight_hand(results.multi_hand_landmarks[0].landmark):
+                cv2.putText(image,'Straight', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            
             if letter:
-                cv2.putText(image,letter, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-           
-           
+                cv2.putText(image,letter, (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
         cv2.imshow('MediaPipe Hands', image)
         if cv2.waitKey(1) & 0xFF == 27:
