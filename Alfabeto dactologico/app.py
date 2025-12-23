@@ -66,7 +66,7 @@ def get_finger_status(landmarks):
     
     return finger
 
-def distance_between_fingers(finger1,finger2,landmarks):
+def distance_between_landmarks(finger1,finger2,landmarks):
     return np.sqrt((landmarks[finger1].x - landmarks[finger2].x)**2 + (landmarks[finger1].y - landmarks[finger2].y)**2)
 
 #Dedo 1 cruza al dedo 2
@@ -96,14 +96,17 @@ def fingers_pointing_to_the_right(landmarks):
     return landmarks[5].x > landmarks[0].x
 
 def thumb_tip_over_middle_tip(landmarks):
-    return landmarks[4].y > landmarks[12].y and distance_between_fingers(4,12,landmarks) < 0.1
+    return landmarks[4].y > landmarks[12].y and distance_between_landmarks(4,12,landmarks) < 0.1
 
 def fingers_pointing_to_the_left(landmarks):
     # El Nudillo del indice (5) esta a la izquierda de la Muñeca (0)
     return landmarks[5].x < landmarks[0].x
 
 def tips_over_mcps(landmarks):
-    return (distance_between_fingers(8,5,landmarks) < 0.05) and (distance_between_fingers(12,9,landmarks) < 0.05) and (distance_between_fingers(16,13,landmarks) < 0.05) and (distance_between_fingers(20,17,landmarks) < 0.05)
+    return (distance_between_landmarks(8,5,landmarks) < 0.05) and (distance_between_landmarks(12,9,landmarks) < 0.05) and (distance_between_landmarks(16,13,landmarks) < 0.05) and (distance_between_landmarks(20,17,landmarks) < 0.05)
+
+def tip_over_pip(tip,pip,landmarks):
+    return distance_between_landmarks(tip,pip,landmarks) < 0.1
 
 def identify_letter(finger_status, landmarks):
 
@@ -123,7 +126,7 @@ def identify_letter(finger_status, landmarks):
         if finger_status == [0,1,1,0,0]:
             if is_finger_crossed(8,12,landmarks):
                 return "R"
-            elif distance_between_fingers(8,12,landmarks) > 0.15:
+            elif distance_between_landmarks(8,12,landmarks) > 0.15:
                 return "V"
             else:
                 return "U"
@@ -133,17 +136,19 @@ def identify_letter(finger_status, landmarks):
             return "I"
 
         if finger_status == [0,1,1,1,0]:
-            if distance_between_fingers(8,12,landmarks) > 0.1 and distance_between_fingers(12,16,landmarks) > 0.1:
+            if distance_between_landmarks(8,12,landmarks) > 0.1 and distance_between_landmarks(12,16,landmarks) > 0.1:
                 return "W"
             else:
                 return "P"
 
         if finger_status == [1,0,1,1,1]:
             #punta del dedo gordo y punta del dedo indice estan cerca
-            if distance_between_fingers(4,8,landmarks) < 0.1:
+            if distance_between_landmarks(4,8,landmarks) < 0.05:
                 return "O"
-            elif distance_between_fingers(2,8,landmarks) < 0.15:
+            elif distance_between_landmarks(2,8,landmarks) < 0.15:
                 return "S"
+            elif tip_over_pip(6,4,landmarks):
+                return "T"
         
     if side_hand(landmarks):
         if finger_status == [0,1,1,1,1]:
@@ -156,6 +161,11 @@ def identify_letter(finger_status, landmarks):
     if upside_down_hand(landmarks):
         if finger_status == [0,1,1,1,0]:
             return "M"
+        
+        if finger_status == [0,1,1,0,0]:
+            return "N"
+        
+
 cap = cv2.VideoCapture(0)
 finger_tips = [hands_model.HandLandmark.THUMB_TIP,
                hands_model.HandLandmark.INDEX_FINGER_TIP,
