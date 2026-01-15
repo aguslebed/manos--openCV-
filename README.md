@@ -69,4 +69,4 @@ El sistema reconoce actualmente las siguientes letras y configuraciones:
 
 Esta imagen fue utilizada como referencia para el reconocimiento de las señas:
 
-![Alfabeto dactilológico español](https://raw.githubusercontent.com/AgustinG98/imagenes-repo/main/alfabeto-dactilologico-espanol.png)
+![Alfabeto dactilológico español](https://github.com/aguslebed/manos--openCV-/blob/main/Guia%20para%20el%20alfabeto%20dactologico.png)
